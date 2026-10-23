@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using UrlShortener2.Data;
+using UrlShortener2.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 	options.UseNpgsql(builder.Configuration.GetConnectionString("UrlMapperDB")));
+
+builder.Services.AddScoped<UrlShorteningService>();
 
 // Add CORS support for local development
 builder.Services.AddCors(options =>

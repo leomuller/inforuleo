@@ -16,3 +16,8 @@ https://localhost:7006/scalar/#tag/urls
 - create auto identity number in DB and convert that to alphanumeric string for the short URL (Base62 encoding)
 
 
+
+TBD
+- move test API's to separate controller
+- add DTO's to their own folder and files
+

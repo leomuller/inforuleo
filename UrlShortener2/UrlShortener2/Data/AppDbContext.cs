@@ -20,14 +20,15 @@ namespace UrlShortener2.Data
 				entity.HasKey(u => u.MappingId);
 				entity.Property(u => u.MappingId).HasColumnName("mapping_id").ValueGeneratedOnAdd();
 
-				entity.Property(u => u.UrlShort).HasColumnName("url_short").HasMaxLength(50).IsRequired();
+				entity.Property(u => u.UrlShort).HasColumnName("url_short").HasMaxLength(50);
 				entity.Property(u => u.UrlLong).HasColumnName("url_long").IsRequired();
 				entity.Property(u => u.UrlLongNormalized).HasColumnName("url_long_normalized").IsRequired();
 				entity.Property(u => u.DateCreated).HasColumnName("date_created").IsRequired();
 				entity.Property(u => u.DateLastUsed).HasColumnName("date_last_used");
 				entity.Property(u => u.StatusId).HasColumnName("status_id").IsRequired();
 
-				entity.HasIndex(u => u.UrlShort).IsUnique();
+				// Matches the DB's partial unique index: only enforced once a short code is assigned.
+				entity.HasIndex(u => u.UrlShort).IsUnique().HasFilter("url_short IS NOT NULL");
 				entity.HasIndex(u => u.UrlLongNormalized).IsUnique();
 			});
 		}

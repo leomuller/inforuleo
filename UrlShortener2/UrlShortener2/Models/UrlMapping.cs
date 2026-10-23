@@ -4,7 +4,8 @@ namespace UrlShortener2.Models
 	{
 		public long MappingId { get; set; }
 
-		public string UrlShort { get; set; }
+		// Null while status is "initializing" - assigned once we know MappingId (status becomes "active").
+		public string? UrlShort { get; set; }
 
 		// Original URL as submitted.
 		public string UrlLong { get; set; }
@@ -16,7 +17,7 @@ namespace UrlShortener2.Models
 
 		public DateTime? DateLastUsed { get; set; }
 
-		// FK to lt_status: 2 = initializing, 3 = active, 4 = archived.
-		public short StatusId { get; set; }
+		// FK to lt_status.
+		public UrlMappingStatus StatusId { get; set; }
 	}
 }

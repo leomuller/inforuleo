@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using UrlShortener2.Services;
 using UrlShortener2.Utils;
 
 namespace UrlShortener2.Controllers
@@ -7,6 +8,14 @@ namespace UrlShortener2.Controllers
 	[ApiController]
 	public class UrlsController : ControllerBase
 	{
+		private readonly UrlShorteningService _urlShorteningService;
+		private readonly string _baseShortUrl;
+
+		public UrlsController(UrlShorteningService urlShorteningService, IConfiguration configuration)
+		{
+			_urlShorteningService = urlShorteningService;
+			_baseShortUrl = configuration["BaseShortUrl"]!;
+		}
 
 		// GET /api/v1/urls/test/encode/{value} - for trying out Base62.Encode directly
 		[HttpGet("api/v1/urls/test/encode/{value}")]
@@ -26,30 +35,42 @@ namespace UrlShortener2.Controllers
 		[HttpGet("api/v1/urls/test/validate")]
 		public ActionResult<string> TestValidate([FromQuery] string url)
 		{
-			return UrlValidator.TryValidate(url, out var error) ? "valid" : error;
+			return UrlValidator.TryValidate(url, out _, out var error) ? "valid" : error;
 		}
 
 		// POST /api/v1/urls
 		[HttpPost("api/v1/urls")]
-		public ActionResult<ShortenUrlResponse> ShortenUrl([FromBody] ShortenUrlRequest request)
+		public async Task<ActionResult<ShortenUrlResponse>> ShortenUrl([FromBody] ShortenUrlRequest request)
 		{
-			// TODO: validate, normalize, generate/lookup short code, persist, return 201/200
+			if (UrlValidator.TryValidate(request.LongUrl, out var uri, out var error) == false)
+			{
+				return Problem(statusCode: StatusCodes.Status400BadRequest, title: "Invalid longUrl", detail: error);
+			}
 
-			//Microsoft.AspNetCore.Mvc.ProblemDetails //for errors.
+			var (mapping, wasCreated) = await _urlShorteningService.GetOrCreateAsync(request.LongUrl, uri!);
 
+			var response = new ShortenUrlResponse
+			{
+				ShortCode = mapping.UrlShort!,
+				ShortUrl = $"{_baseShortUrl}/{mapping.UrlShort}",
+				LongUrl = mapping.UrlLong,
+				CreatedAt = mapping.DateCreated,
+			};
 
-			throw new NotImplementedException();
+			return wasCreated ? Created(response.ShortUrl, response) : Ok(response);
 		}
 
 		// GET /{shortCode}
 		[HttpGet("/{shortCode}")]
-		public IActionResult Resolve(string shortCode)
+		public async Task<IActionResult> Resolve(string shortCode)
 		{
-			// TODO: look up long URL by shortCode, 302 redirect or 404
+			var mapping = await _urlShorteningService.ResolveAsync(shortCode);
+			if (mapping == null)
+			{
+				return Problem(statusCode: StatusCodes.Status404NotFound, title: "Short code not found", detail: $"No URL found for code '{shortCode}'.");
+			}
 
-
-
-			throw new NotImplementedException();
+			return Redirect(mapping.UrlLong);
 		}
 	}
 

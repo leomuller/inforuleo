@@ -4,8 +4,10 @@ namespace UrlShortener2.Utils
 	{
 		private const int MaxLength = 2048;
 
-		public static bool TryValidate(string? url, out string? error)
+		public static bool TryValidate(string? url, out Uri? uri, out string? error)
 		{
+			uri = null;
+
 			//check not empty.
 			if (string.IsNullOrWhiteSpace(url))
 			{
@@ -24,9 +26,9 @@ namespace UrlShortener2.Utils
 			//make sure it is a valid URL (asbolute, starting with HTTP or HTTPS
 			//IsWellFormedOriginalString() rejects raw spaces/invalid characters that Uri.TryCreate
 			//would otherwise silently auto-escape (e.g. "https://x.com/my path" would parse "successfully").
-			if (Uri.TryCreate(url, UriKind.Absolute, out var uri) == false ||
-				(uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
-				uri.IsWellFormedOriginalString() == false)
+			if (Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) == false ||
+				(parsedUri.Scheme != Uri.UriSchemeHttp && parsedUri.Scheme != Uri.UriSchemeHttps) ||
+				parsedUri.IsWellFormedOriginalString() == false)
 			{
 				error = "longUrl must be an absolute http or https URL.";
 				return false;
@@ -34,12 +36,13 @@ namespace UrlShortener2.Utils
 
 			//check length against the canonical (fully-escaped) form, not the raw input -
 			//escaping (e.g. spaces, unicode) can make the real URL longer than what was typed.
-			if (ToCanonical(uri).Length > MaxLength)
+			if (ToCanonical(parsedUri).Length > MaxLength)
 			{
 				error = $"normalized longUrl must not exceed {MaxLength} characters.";
 				return false;
 			}
 
+			uri = parsedUri;
 			error = null;
 			return true;
 		}
