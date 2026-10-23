@@ -22,10 +22,30 @@ tests/
 
 ## Build, run, test
 
-Prerequisites: .NET 10 SDK, a PostgreSQL instance, Docker (only needed for the
-integration tests, which spin up their own throwaway Postgres container).
+### Run everything with one command (Docker)
 
-### Database setup
+```bash
+docker compose up --build
+```
+
+This builds the API image from `UrlShortener2/Dockerfile`, starts a Postgres
+container, and runs the scripts in `db/init/` automatically (Postgres's
+official image executes `.sql` files in `/docker-entrypoint-initdb.d/` the
+first time its data volume is empty) - creates `apiuser`, the `lt_status` and
+`url_mappings` tables, the indexes, and the grants. No manual DB setup needed.
+
+- API: `http://localhost:8080` (see curl examples below)
+- Postgres (if you want to connect to it directly, e.g. via `psql`):
+  `localhost:5433` (remapped from the container's `5432` since a native
+  Postgres is likely already using `5432` on the host)
+
+`docker compose down -v` stops everything and removes the Postgres volume -
+useful if you want the next `up` to re-run the init scripts from scratch,
+since they only fire once per volume.
+
+### Run without Docker
+
+Prerequisites: .NET 10 SDK, a PostgreSQL instance.
 
 Run once against your Postgres server:
 
@@ -34,7 +54,8 @@ CREATE ROLE apiuser WITH LOGIN PASSWORD 'apipwd';
 CREATE DATABASE inforu OWNER apiuser;
 ```
 
-Then, connected to the `inforu` database:
+Then, connected to the `inforu` database, run `db/init/02-create-schema.sql`
+(same script Docker runs automatically above):
 
 ```sql
 CREATE TABLE lt_status (
@@ -70,11 +91,7 @@ Set the connection string in `UrlShortener2/appsettings.Development.json`:
 }
 ```
 
-(`appsettings.json` only holds a `<placeholder>` sample - real credentials belong
-in the environment-specific file / environment variables, never committed as-is
-in a real deployment.)
-
-### Run
+Then:
 
 ```bash
 dotnet run --project UrlShortener2
@@ -159,18 +176,28 @@ characters. This means:
    special-cased, per the assignment's wording.
 2. **A unique index on `url_long_normalized`** - this is what actually
    guarantees idempotency, not application code. The flow:
-   - Check if a row with this normalized URL already exists -> return it.
-   - If not, insert a new row with status `initializing` and no short code
-     yet (the code depends on `mapping_id`, which only exists after insert).
-   - Compute the short code from the newly-assigned `mapping_id`, set status
-     to `active`, save again.
+   - Check if a row with this normalized URL already exists.
+   - If it exists but isn't `active` yet (see `EnsureActiveAsync` below),
+     finish it: assign the short code and flip it to `active`, then return it.
+   - If it doesn't exist, insert a new row with status `initializing` and no
+     short code yet (the code depends on `mapping_id`, which only exists
+     after insert), then finish it the same way.
    - **Concurrent requests for the same URL**: both can pass the "does it
      exist" check before either inserts. Only one `INSERT` wins; the DB
      rejects the second with a unique-constraint violation. That failure is
      caught (`DbUpdateException` wrapping a Postgres `23505`), and the losing
-     request simply re-queries and returns the winner's row instead of
-     erroring. The database's unique index is the actual arbiter here, not a
-     lock or a retry-until-it-works loop in application code.
+     request re-queries and finishes (or simply returns, if already finished)
+     the winner's row instead of erroring. The database's unique index is the
+     actual arbiter here, not a lock or a retry-until-it-works loop in
+     application code.
+   - **The same "finish it" step (`EnsureActiveAsync`) also self-heals a row
+     left behind `initializing`** - whether that's from a crash between the
+     insert and the follow-up update, or from a second request finding the
+     first request's row before that first request has finished it. This is
+     safe to run concurrently on the same row without any extra locking: the
+     short code is a deterministic function of `mapping_id`, so two callers
+     finishing the same row independently compute and write the identical
+     value - there's nothing to conflict over.
 
 ## Why controllers, not Minimal APIs
 
@@ -213,11 +240,6 @@ preference, not a technical requirement of the project.
 
 ## What's left / what I'd improve with more time
 
-- **Dockerfile / docker-compose** for the app itself - not done yet.
-- A crash between the two save steps in `GetOrCreateAsync` (insert, then
-  assign the short code) would leave a row permanently stuck in
-  `initializing` with no short code. Rare in practice, not currently cleaned
-  up or retried.
 - No auth/rate limiting on the shorten endpoint - out of scope for this
   assignment, but anything public-facing would need it.
 - The `TestController` endpoints (`/api/v1/urls/test/...`) are debug-only

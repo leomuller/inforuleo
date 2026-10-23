@@ -6,7 +6,7 @@ namespace UrlShortener2.Utils
 	{
 		private const string Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 		/// <summary>
-		/// Encodes a numer to string.
+		/// Encodes a number to string.
 		/// Needs to be positive value, left-padded with '0' up to minLength (the assignment requires 6-10 char codes).
 		/// </summary>
 		/// <param name="value">The number of the mapping, that we will return as an alphanumeric string</param>

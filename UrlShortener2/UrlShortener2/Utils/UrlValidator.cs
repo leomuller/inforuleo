@@ -38,7 +38,7 @@ namespace UrlShortener2.Utils
 			//escaping (e.g. spaces, unicode) can make the real URL longer than what was typed.
 			if (ToCanonical(parsedUri).Length > MaxLength)
 			{
-				error = $"normalized longUrl must not exceed {MaxLength} characters.";
+				error = $"longUrl must not exceed {MaxLength} characters once properly escaped.";
 				return false;
 			}
 

@@ -26,6 +26,7 @@ namespace UrlShortener2.Services
 			var existing = await _db.UrlMappings.SingleOrDefaultAsync(m => m.UrlLongNormalized == normalized);
 			if (existing != null)
 			{
+				await EnsureActiveAsync(existing, normalized);
 				_logger.LogInformation(
 					"Idempotent hit for normalized URL {NormalizedUrl}: returning existing ShortCode={ShortCode}",
 					normalized, existing.UrlShort);
@@ -52,6 +53,7 @@ namespace UrlShortener2.Services
 				// Someone else inserted the same normalized URL between our check and our insert -
 				// the DB's unique index is what actually decided this; fetch and return their row instead.
 				var winner = await _db.UrlMappings.SingleAsync(m => m.UrlLongNormalized == normalized);
+				await EnsureActiveAsync(winner, normalized);
 				_logger.LogInformation(
 					"Lost creation race for normalized URL {NormalizedUrl}: using concurrently-created ShortCode={ShortCode}",
 					normalized, winner.UrlShort);
@@ -59,15 +61,33 @@ namespace UrlShortener2.Services
 			}
 
 			// Only now do we know MappingId, so only now can the short code be computed.
-			mapping.UrlShort = Base62.Encode(mapping.MappingId);
-			mapping.StatusId = UrlMappingStatus.Active;
-			await _db.SaveChangesAsync();
+			await EnsureActiveAsync(mapping, normalized);
 
 			_logger.LogInformation(
 				"Created new short URL: MappingId={MappingId} ShortCode={ShortCode} NormalizedUrl={NormalizedUrl}",
 				mapping.MappingId, mapping.UrlShort, normalized);
 
 			return (mapping, true);
+		}
+
+		// Assigns the short code and flips to Active if this row isn't already Active - covers both
+		// the normal "just inserted" case and a row left behind Initializing by a crash or an overlapping
+		// request. Safe to run concurrently on the same row: the short code is a deterministic function
+		// of MappingId, so two concurrent callers compute and write the exact same value - no conflict.
+		private async Task EnsureActiveAsync(UrlMapping mapping, string normalized)
+		{
+			if (mapping.StatusId == UrlMappingStatus.Active)
+			{
+				return;
+			}
+
+			mapping.UrlShort = Base62.Encode(mapping.MappingId);
+			mapping.StatusId = UrlMappingStatus.Active;
+			await _db.SaveChangesAsync();
+
+			_logger.LogInformation(
+				"Completed a previously stuck/in-progress mapping: MappingId={MappingId} ShortCode={ShortCode} NormalizedUrl={NormalizedUrl}",
+				mapping.MappingId, mapping.UrlShort, normalized);
 		}
 
 		// Looks up a mapping by its short code, for the redirect endpoint. Returns null if unknown,
