@@ -11,6 +11,10 @@ namespace UrlShortener2.Controllers
 		public ActionResult<ShortenUrlResponse> ShortenUrl([FromBody] ShortenUrlRequest request)
 		{
 			// TODO: validate, normalize, generate/lookup short code, persist, return 201/200
+
+			//Microsoft.AspNetCore.Mvc.ProblemDetails //for errors.
+
+
 			throw new NotImplementedException();
 		}
 
@@ -35,4 +39,6 @@ namespace UrlShortener2.Controllers
 		public string LongUrl { get; set; }
 		public DateTime CreatedAt { get; set; }
 	}
+
+	
 }
