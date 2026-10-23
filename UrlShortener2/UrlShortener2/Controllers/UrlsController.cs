@@ -23,6 +23,9 @@ namespace UrlShortener2.Controllers
 		public IActionResult Resolve(string shortCode)
 		{
 			// TODO: look up long URL by shortCode, 302 redirect or 404
+
+
+
 			throw new NotImplementedException();
 		}
 	}
