@@ -1,11 +1,27 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using UrlShortener2.Utils;
 
 namespace UrlShortener2.Controllers
 {
 	[ApiController]
 	public class UrlsController : ControllerBase
 	{
+
+		// GET /api/v1/urls/test/encode/{value} - for trying out Base62.Encode directly
+		[HttpGet("api/v1/urls/test/encode/{value}")]
+		public ActionResult<string> TestEncode(long value)
+		{
+			return Base62.Encode(value);
+		}
+
+		// GET /api/v1/urls/test/decode/{code} - for trying out Base62.Decode directly
+		[HttpGet("api/v1/urls/test/decode/{code}")]
+		public ActionResult<long> TestDecode(string code)
+		{
+			return Base62.Decode(code);
+		}
+
 		// POST /api/v1/urls
 		[HttpPost("api/v1/urls")]
 		public ActionResult<ShortenUrlResponse> ShortenUrl([FromBody] ShortenUrlRequest request)
