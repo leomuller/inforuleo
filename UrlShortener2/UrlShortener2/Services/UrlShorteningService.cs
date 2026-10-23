@@ -58,19 +58,50 @@ namespace UrlShortener2.Services
 			return (mapping, true);
 		}
 
-		// Looks up a mapping by its short code, for the redirect endpoint. Returns null if unknown.
+		// Looks up a mapping by its short code, for the redirect endpoint. Returns null if unknown,
+		// malformed, or not Active (e.g. still Initializing or already Archived).
 		public async Task<UrlMapping?> ResolveAsync(string shortCode)
 		{
-			var mapping = await _db.UrlMappings.SingleOrDefaultAsync(m => m.UrlShort == shortCode);
+			long mappingId;
+			try
+			{
+				mappingId = Base62.Decode(shortCode);
+			}
+			catch (ArgumentException)
+			{
+				// not valid base62 (or empty) - can't possibly be a real short code.
+				return null;
+			}
+
+			var mapping = await _db.UrlMappings.SingleOrDefaultAsync(
+				m => m.MappingId == mappingId && m.StatusId == UrlMappingStatus.Active);
+
 			if (mapping == null)
 			{
 				return null;
 			}
 
+			//save date last date used - even though this is not really in scope of assignment. 
 			mapping.DateLastUsed = DateTime.UtcNow;
 			await _db.SaveChangesAsync();
 
 			return mapping;
+		}
+
+		// Diagnostic lookup - the full stored row behind a short code, regardless of status, no side effects.
+		public async Task<UrlMapping?> GetDetailsAsync(string shortCode)
+		{
+			long mappingId;
+			try
+			{
+				mappingId = Base62.Decode(shortCode);
+			}
+			catch (ArgumentException)
+			{
+				return null;
+			}
+
+			return await _db.UrlMappings.SingleOrDefaultAsync(m => m.MappingId == mappingId);
 		}
 
 		private static bool IsUniqueViolation(DbUpdateException ex)

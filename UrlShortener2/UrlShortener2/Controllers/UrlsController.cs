@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using UrlShortener2.Dtos;
 using UrlShortener2.Services;
 using UrlShortener2.Utils;
 
@@ -15,27 +16,6 @@ namespace UrlShortener2.Controllers
 		{
 			_urlShorteningService = urlShorteningService;
 			_baseShortUrl = configuration["BaseShortUrl"]!;
-		}
-
-		// GET /api/v1/urls/test/encode/{value} - for trying out Base62.Encode directly
-		[HttpGet("api/v1/urls/test/encode/{value}")]
-		public ActionResult<string> TestEncode(long value)
-		{
-			return Base62.Encode(value);
-		}
-
-		// GET /api/v1/urls/test/decode/{code} - for trying out Base62.Decode directly
-		[HttpGet("api/v1/urls/test/decode/{code}")]
-		public ActionResult<long> TestDecode(string code)
-		{
-			return Base62.Decode(code);
-		}
-
-		// GET /api/v1/urls/test/validate?url=... - for trying out UrlValidator.TryValidate directly
-		[HttpGet("api/v1/urls/test/validate")]
-		public ActionResult<string> TestValidate([FromQuery] string url)
-		{
-			return UrlValidator.TryValidate(url, out _, out var error) ? "valid" : error;
 		}
 
 		// POST /api/v1/urls
@@ -73,19 +53,4 @@ namespace UrlShortener2.Controllers
 			return Redirect(mapping.UrlLong);
 		}
 	}
-
-	public class ShortenUrlRequest
-	{
-		public string LongUrl { get; set; }
-	}
-
-	public class ShortenUrlResponse
-	{
-		public string ShortCode { get; set; }
-		public string ShortUrl { get; set; }
-		public string LongUrl { get; set; }
-		public DateTime CreatedAt { get; set; }
-	}
-
-	
 }
