@@ -15,5 +15,8 @@ namespace UrlShortener2.Models
 		public DateTime DateCreated { get; set; }
 
 		public DateTime? DateLastUsed { get; set; }
+
+		// FK to lt_status: 2 = initializing, 3 = active, 4 = archived.
+		public short StatusId { get; set; }
 	}
 }

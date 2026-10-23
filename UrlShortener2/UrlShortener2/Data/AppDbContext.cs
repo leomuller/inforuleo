@@ -25,6 +25,7 @@ namespace UrlShortener2.Data
 				entity.Property(u => u.UrlLongNormalized).HasColumnName("url_long_normalized").IsRequired();
 				entity.Property(u => u.DateCreated).HasColumnName("date_created").IsRequired();
 				entity.Property(u => u.DateLastUsed).HasColumnName("date_last_used");
+				entity.Property(u => u.StatusId).HasColumnName("status_id").IsRequired();
 
 				entity.HasIndex(u => u.UrlShort).IsUnique();
 				entity.HasIndex(u => u.UrlLongNormalized).IsUnique();
