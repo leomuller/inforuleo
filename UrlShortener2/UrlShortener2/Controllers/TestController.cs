@@ -44,5 +44,12 @@ namespace UrlShortener2.Controllers
 			var mapping = await _urlShorteningService.GetDetailsAsync(shortCode);
 			return mapping == null ? NotFound() : Ok(mapping);
 		}
+
+		// GET /api/v1/urls/test/throw - deliberately throws, to verify unhandled exceptions become a 500 ProblemDetails with no stack trace
+		[HttpGet("api/v1/urls/test/throw")]
+		public IActionResult TestThrow()
+		{
+			throw new InvalidOperationException("this is a deliberate test exception");
+		}
 	}
 }

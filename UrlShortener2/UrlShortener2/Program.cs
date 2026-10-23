@@ -9,6 +9,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// Required so UseExceptionHandler() below writes a standard ProblemDetails body (no stack trace) for unhandled exceptions.
+builder.Services.AddProblemDetails(options =>
+{
+	// The default exception handler leaves Detail empty (it won't put the exception message there, on purpose -
+	// that could leak internals). Give unhandled exceptions a generic Detail; leave Problem(...) calls that already set one alone.
+	options.CustomizeProblemDetails = context =>
+	{
+		context.ProblemDetails.Detail ??= "An unexpected error occurred. Please try again later.";
+	};
+});
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 	options.UseNpgsql(builder.Configuration.GetConnectionString("UrlMapperDB")));
 
@@ -31,6 +42,11 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+
+// No path given: the default handler (backed by AddProblemDetails above) turns any unhandled
+// exception into a 500 ProblemDetails response with no stack trace, in every environment.
+app.UseExceptionHandler();
+
 if (app.Environment.IsDevelopment() == true)
 {
 	app.MapOpenApi();
@@ -38,7 +54,6 @@ if (app.Environment.IsDevelopment() == true)
 }
 else
 {
-	app.UseExceptionHandler("/Error");
 	app.UseHsts();
 }
 

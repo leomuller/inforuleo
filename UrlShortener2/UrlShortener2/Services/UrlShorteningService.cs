@@ -9,10 +9,12 @@ namespace UrlShortener2.Services
 	public class UrlShorteningService
 	{
 		private readonly AppDbContext _db;
+		private readonly ILogger<UrlShorteningService> _logger;
 
-		public UrlShorteningService(AppDbContext db)
+		public UrlShorteningService(AppDbContext db, ILogger<UrlShorteningService> logger)
 		{
 			_db = db;
+			_logger = logger;
 		}
 
 		// Returns the existing mapping if this URL (by its normalized form) was already shortened,
@@ -24,6 +26,9 @@ namespace UrlShortener2.Services
 			var existing = await _db.UrlMappings.SingleOrDefaultAsync(m => m.UrlLongNormalized == normalized);
 			if (existing != null)
 			{
+				_logger.LogInformation(
+					"Idempotent hit for normalized URL {NormalizedUrl}: returning existing ShortCode={ShortCode}",
+					normalized, existing.UrlShort);
 				return (existing, false);
 			}
 
@@ -47,6 +52,9 @@ namespace UrlShortener2.Services
 				// Someone else inserted the same normalized URL between our check and our insert -
 				// the DB's unique index is what actually decided this; fetch and return their row instead.
 				var winner = await _db.UrlMappings.SingleAsync(m => m.UrlLongNormalized == normalized);
+				_logger.LogInformation(
+					"Lost creation race for normalized URL {NormalizedUrl}: using concurrently-created ShortCode={ShortCode}",
+					normalized, winner.UrlShort);
 				return (winner, false);
 			}
 
@@ -54,6 +62,10 @@ namespace UrlShortener2.Services
 			mapping.UrlShort = Base62.Encode(mapping.MappingId);
 			mapping.StatusId = UrlMappingStatus.Active;
 			await _db.SaveChangesAsync();
+
+			_logger.LogInformation(
+				"Created new short URL: MappingId={MappingId} ShortCode={ShortCode} NormalizedUrl={NormalizedUrl}",
+				mapping.MappingId, mapping.UrlShort, normalized);
 
 			return (mapping, true);
 		}
@@ -70,6 +82,7 @@ namespace UrlShortener2.Services
 			catch (ArgumentException)
 			{
 				// not valid base62 (or empty) - can't possibly be a real short code.
+				_logger.LogWarning("Resolve failed: {ShortCode} is not a valid base62 short code", shortCode);
 				return null;
 			}
 
@@ -78,12 +91,17 @@ namespace UrlShortener2.Services
 
 			if (mapping == null)
 			{
+				_logger.LogInformation(
+					"Resolve miss: no active mapping for ShortCode={ShortCode} (decoded MappingId={MappingId})",
+					shortCode, mappingId);
 				return null;
 			}
 
-			//save date last date used - even though this is not really in scope of assignment. 
+			//save date last date used - even though this is not really in scope of assignment.
 			mapping.DateLastUsed = DateTime.UtcNow;
 			await _db.SaveChangesAsync();
+
+			_logger.LogInformation("Resolved ShortCode={ShortCode} to MappingId={MappingId}", shortCode, mappingId);
 
 			return mapping;
 		}

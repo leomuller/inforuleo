@@ -18,6 +18,7 @@ https://localhost:7006/scalar/#tag/urls
 
 
 TBD
-- move test API's to separate controller
-- add DTO's to their own folder and files
+- add test api for short code (now it redirects)
+- do I want to update last used date? out of scope?
+- 
 
