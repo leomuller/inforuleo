@@ -22,6 +22,13 @@ namespace UrlShortener2.Controllers
 			return Base62.Decode(code);
 		}
 
+		// GET /api/v1/urls/test/validate?url=... - for trying out UrlValidator.TryValidate directly
+		[HttpGet("api/v1/urls/test/validate")]
+		public ActionResult<string> TestValidate([FromQuery] string url)
+		{
+			return UrlValidator.TryValidate(url, out var error) ? "valid" : error;
+		}
+
 		// POST /api/v1/urls
 		[HttpPost("api/v1/urls")]
 		public ActionResult<ShortenUrlResponse> ShortenUrl([FromBody] ShortenUrlRequest request)
