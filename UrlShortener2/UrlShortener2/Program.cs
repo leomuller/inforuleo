@@ -70,3 +70,8 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 app.Run();
+
+// Exposes the implicit top-level Program class so WebApplicationFactory<Program> can reference it from the test projects.
+public partial class Program
+{
+}

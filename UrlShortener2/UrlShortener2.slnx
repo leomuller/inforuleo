@@ -1,3 +1,7 @@
 <Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/UrlShortener2.IntegrationTests/UrlShortener2.IntegrationTests.csproj" />
+    <Project Path="tests/UrlShortener2.UnitTests/UrlShortener2.UnitTests.csproj" />
+  </Folder>
   <Project Path="UrlShortener2/UrlShortener2.csproj" />
 </Solution>
