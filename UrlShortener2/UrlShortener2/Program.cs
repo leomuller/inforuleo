@@ -25,6 +25,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<UrlShorteningService>();
 
+// /health below actually pings the DB (via AppDbContext.Database.CanConnectAsync()), not just "is the process alive".
+builder.Services.AddHealthChecks()
+	.AddDbContextCheck<AppDbContext>();
+
 // Add CORS support for local development
 builder.Services.AddCors(options =>
 {
@@ -62,5 +66,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health");
 
 app.Run();
