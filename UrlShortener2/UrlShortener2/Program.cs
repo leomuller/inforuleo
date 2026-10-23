@@ -1,17 +1,37 @@
+using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Add CORS support for local development
+builder.Services.AddCors(options =>
+{
+	options.AddPolicy("AllowLocalDevelopment", policy =>
+	{
+		policy
+			.WithOrigins("http://localhost:4200", "https://localhost:4200")
+			.AllowAnyMethod()
+			.AllowAnyHeader()
+			.AllowCredentials();
+	});
+});
+
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() == true)
 {
 	app.MapOpenApi();
+	app.MapScalarApiReference();
+}
+else
+{
+	app.UseExceptionHandler("/Error");
+	app.UseHsts();
 }
 
 app.UseHttpsRedirection();
