@@ -1,0 +1,1 @@
+CREATE ROLE apiuser WITH LOGIN PASSWORD 'apipwd';

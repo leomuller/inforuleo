@@ -201,7 +201,7 @@ preference, not a technical requirement of the project.
 - **No EF Core migrations** - the schema is hand-written SQL (above), and
   `AppDbContext` is configured to match it exactly (explicit column names,
   types, the partial unique index). This was a deliberate choice to stay in
-  direct control of the schema while learning EF Core, rather than letting
+  direct control of the schema, rather than letting
   migrations generate it.
 - **Validation length check runs against both the raw input and the
   canonical (fully-escaped) URL.** A URL can look like it's under the 2048
